@@ -41,6 +41,7 @@ export function parseCsv(text) {
 
 // Guess which column holds what, forgiving mis-cased / alternate headers.
 const HEADER_FORMS = {
+  id: ['id', 'identifier', 'key', 'number', 'receiptid'],
   at: ['at', 'timestamp', 'time', 'date', 'datetime', 'createdat', 'when'],
   type: ['type', 'kind', 'category', 'receipttype'],
   heading: ['heading', 'title', 'name', 'item', 'summary'],

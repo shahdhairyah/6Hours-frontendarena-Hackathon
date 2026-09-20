@@ -3,12 +3,14 @@ import {
   Search,
   ChevronRight,
   X,
-  Star
+  Star,
+  Download
 } from 'lucide-react'
 import { TYPES, TYPE_META, MOODS, MOOD_META } from '../engine/types'
 import { fmtDate, fmtDateShort, fmtCurrency } from '../utils/formatters'
 import { sound } from '../audio/soundEngine'
 import { STORY_PRESETS } from '../constants/index'
+import { ReceiptService } from '../services/receiptService'
 
 /**
  * LedgerView: Realistic continuous thermal paper roll with instant search, presets, and bookmarks.

@@ -1,26 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { LOCAL_STORAGE_KEYS } from '../constants/index'
+import { storageService } from '../services/storageService'
 
 /**
  * Custom hook for saving and retrieving bookmarked life receipts.
  */
 export function useBookmarks() {
   const [bookmarkedIds, setBookmarkedIds] = useState(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.BOOKMARKS)
-      return saved ? JSON.parse(saved) : []
-    } catch {
-      return []
-    }
+    return storageService.getItem(LOCAL_STORAGE_KEYS.BOOKMARKS, [])
   })
 
-  // Sync to localStorage
+  // Sync to storage service
   useEffect(() => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEYS.BOOKMARKS, JSON.stringify(bookmarkedIds))
-    } catch {
-      // safe fallback
-    }
+    storageService.setItem(LOCAL_STORAGE_KEYS.BOOKMARKS, bookmarkedIds)
   }, [bookmarkedIds])
 
   const toggleBookmark = useCallback((receiptId) => {

@@ -1,0 +1,19 @@
+{
+  "name": "LEDGER // Your Life, In Receipts",
+  "short_name": "LEDGER",
+  "description": "An interactive digital experience transforming 466 life receipts into an evocative story of wanderlust, dark nights, human connection, and purposeful creation.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07080b",
+  "theme_color": "#07080b",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "entertainment", "productivity"]
+}

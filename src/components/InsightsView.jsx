@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { sound } from '../audio/soundEngine'
 import { fmtDateShort } from '../utils/formatters'
+import { TYPES, TYPE_META } from '../engine/types'
 
 /**
  * InsightsView: Algorithmic pattern investigations answering "What does it all mean?".
@@ -349,6 +350,60 @@ export default function InsightsView({
           </div>
         </div>
       </div>
+
+      {/* The 9 Digital-Life Streams: Complete Behavioral Matrix */}
+      <section className="rounded-3xl border border-white/[0.08] bg-[#0d0f17] p-8 sm:p-10 space-y-6 shadow-2xl">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-xs font-mono-receipt text-cyan-400">
+            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>DATASET ARCHAEOLOGY // 9 DISTINCT ACTIVITY TYPES</span>
+          </div>
+          <h2 className="font-serif-story text-2xl sm:text-4xl text-[#fbf9f5] font-normal">
+            The 9 Streams of a Digital Life
+          </h2>
+          <p className="font-sans-ui text-xs sm:text-sm text-[#94a3b8] max-w-2xl leading-relaxed">
+            Every participant was given the same raw dataset. Here is how each category left its unique footprint across time. Click any card to inspect a representative moment.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+          {TYPES.map((type) => {
+            const meta = TYPE_META[type] || { label: type, short: '◈', color: '#f59e0b' }
+            const count = stats.byType?.[type] || 0
+            const pct = stats.byTypePct?.[type] || 0
+            const sample = (receipts || []).find((r) => r.type === type)
+            return (
+              <div
+                key={type}
+                onClick={() => {
+                  sound.playTick(1200)
+                  if (sample && onSelectReceipt) onSelectReceipt(sample)
+                }}
+                className="p-5 rounded-2xl bg-[#07080c] border border-white/[0.06] hover:border-white/[0.2] transition-all cursor-pointer group space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 font-mono-receipt text-xs font-bold" style={{ color: meta.color }}>
+                    <span>{meta.short}</span>
+                    <span className="uppercase">{meta.label}</span>
+                  </span>
+                  <span className="text-xs font-mono-receipt text-zinc-400">
+                    {count} items ({pct}%)
+                  </span>
+                </div>
+                {sample && (
+                  <p className="font-mono-receipt text-xs text-zinc-300 line-clamp-2 group-hover:text-amber-300 transition-colors">
+                    "{sample.heading}"
+                  </p>
+                )}
+                <div className="text-[10px] font-mono-receipt text-zinc-500 pt-1 border-t border-white/[0.04] flex justify-between">
+                  <span>Inspect sample</span>
+                  <span className="text-amber-400">↳ № {sample?.id}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
 
       {/* Innovative Psychological Persona Matrix & Interactive Life Passport */}
       <section className="rounded-3xl border border-amber-500/20 bg-gradient-to-b from-[#10131d] via-[#0b0d14] to-[#07080b] p-8 sm:p-12 shadow-2xl space-y-8 relative overflow-hidden">
