@@ -60,14 +60,6 @@ const HEADER_FORMS = {
 
 const lower = (s) => String(s || '').toLowerCase().replace(/[^a-z]/g, '')
 
-const isCsvRow = (dict, r) =>
-  r &&
-  ((dict.type && TYPES.includes(lowerDictSafe(dict.type, r))) || (dict.at && r[dict.at]))
-
-function lowerDictSafe(k, r) {
-  return typeof r[k] === 'string' ? r[k].toLowerCase() : r[k]
-}
-
 // Converts parsed CSV rows (array of arrays) into unified receipts.
 export function rowsToReceipts(parsed) {
   if (!parsed.length) return []

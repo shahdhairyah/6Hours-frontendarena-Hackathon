@@ -5,29 +5,20 @@ import {
   Pause,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
-  Volume2,
-  Calendar,
-  Clock,
-  MapPin,
-  Heart
+  Sparkles
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { sound } from '../audio/soundEngine'
-import { TYPE_META, MOOD_META } from '../engine/types'
-import { fmtDate, fmtTime } from '../utils/formatters'
 
+/**
+ * CinemaModal: Fullscreen interactive slideshow stepping through 10 pivotal milestones.
+ */
 export default function CinemaModal({
   isOpen,
   onClose,
   receipts,
-  chapters,
-  threads,
   onSelectReceipt
 }) {
-  if (!isOpen) return null
-
-  // 10 Curated Pivotal Milestones
   const milestones = [
     {
       act: 'ACT I',
@@ -115,11 +106,11 @@ export default function CinemaModal({
   const [isPlaying, setIsPlaying] = useState(true)
 
   const activeMilestone = milestones[currentIdx]
-  const targetReceipt = receipts.find((r) => r.id === activeMilestone.receiptId) || receipts[0]
+  const targetReceipt = receipts?.find((r) => r.id === activeMilestone.receiptId) || receipts?.[0]
 
   // Auto-play timer
   useEffect(() => {
-    if (!isPlaying) return
+    if (!isOpen || !isPlaying) return
     const timer = setInterval(() => {
       setCurrentIdx((prev) => {
         if (prev >= milestones.length - 1) {
@@ -133,7 +124,9 @@ export default function CinemaModal({
     }, 7000)
 
     return () => clearInterval(timer)
-  }, [isPlaying, milestones.length])
+  }, [isOpen, isPlaying, milestones.length])
+
+  if (!isOpen) return null
 
   const handleNext = () => {
     sound.playTick(1400)
@@ -152,25 +145,31 @@ export default function CinemaModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#07080b]/95 backdrop-blur-xl p-4 sm:p-8 animate-in fade-in">
-      <div className="relative w-full max-w-4xl rounded-3xl border border-[#272c3d] bg-[#0e1017] p-6 sm:p-12 shadow-2xl flex flex-col justify-between min-h-[580px] overflow-hidden">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cinema-heading"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#050608]/90 backdrop-blur-2xl p-4 sm:p-8 animate-in fade-in"
+    >
+      <div className="relative w-full max-w-4xl rounded-3xl border border-white/[0.1] bg-[#0c0e15] p-6 sm:p-12 shadow-2xl flex flex-col justify-between min-h-[580px] overflow-hidden">
         {/* Ambient Glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#e0a458]/15 via-[#d2869a]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-[#f59e0b]/15 via-[#fb7185]/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Control Bar */}
-        <div className="relative z-10 flex items-center justify-between pb-6 border-b border-[#1e2230]">
+        <div className="relative z-10 flex items-center justify-between pb-6 border-b border-white/[0.08]">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-mono-receipt px-2.5 py-1 rounded bg-[#181c28] text-[#e0a458] border border-[#2b3245]">
+            <span className="text-xs font-mono-receipt px-3 py-1 rounded-full bg-white/[0.05] text-[#f59e0b] border border-white/[0.1]">
               {activeMilestone.act} // SCENE {currentIdx + 1} OF {milestones.length}
             </span>
-            <span className="text-xs font-mono-receipt text-[#6e768a]">
+            <span className="text-xs font-mono-receipt text-[#94a3b8]">
               {activeMilestone.date}
             </span>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-[#141620] hover:bg-[#1f2332] text-[#8e95a7] hover:text-[#f2f4f8] transition-colors"
+            aria-label="Close cinema reel"
+            className="p-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-[#94a3b8] hover:text-[#fbf9f5] transition-colors focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none"
           >
             <X className="w-5 h-5" />
           </button>
@@ -178,28 +177,28 @@ export default function CinemaModal({
 
         {/* Center Main Stage */}
         <div className="relative z-10 py-8 space-y-6 max-w-3xl">
-          <h2 className="font-serif-story text-3xl sm:text-5xl font-medium text-[#f5f2eb] leading-tight">
+          <h2 id="cinema-heading" className="font-serif-story text-3xl sm:text-5xl font-normal text-[#fbf9f5] leading-tight">
             {activeMilestone.title}
           </h2>
 
-          <div className="p-4 rounded-2xl bg-[#141722] border-l-4 border-[#e0a458] text-[#dcdfe8] font-serif-story italic text-lg sm:text-xl">
+          <div className="p-5 rounded-2xl bg-white/[0.03] border-l-4 border-[#f59e0b] text-[#e2e8f0] font-serif-story italic text-lg sm:text-2xl leading-relaxed">
             "{activeMilestone.quote}"
           </div>
 
-          <p className="font-sans-ui text-sm sm:text-base text-[#9ba3b8] leading-relaxed">
+          <p className="font-sans-ui text-sm sm:text-base text-[#cbd5e1] leading-relaxed">
             {activeMilestone.narrative}
           </p>
 
-          {/* Connected Thermal Slip Sneak Peek */}
+          {/* Connected Thermal Slip Preview */}
           {targetReceipt && (
             <div
               onClick={() => {
                 sound.playPaperRustle()
                 onSelectReceipt(targetReceipt)
               }}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#f8f6f0] text-[#1c1d22] font-mono-receipt text-xs cursor-pointer hover:scale-102 transition-transform shadow-md"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl thermal-slip font-mono-receipt text-xs cursor-pointer hover:scale-102 transition-transform shadow-md"
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#e0a458]" />
+              <Sparkles className="w-3.5 h-3.5 text-[#f59e0b]" />
               <span className="font-bold">INSPECT RECEIPT № {targetReceipt.id}:</span>
               <span className="truncate max-w-xs">{targetReceipt.heading}</span>
             </div>
@@ -207,7 +206,7 @@ export default function CinemaModal({
         </div>
 
         {/* Bottom Playback Bar */}
-        <div className="relative z-10 pt-6 border-t border-[#1e2230] flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="relative z-10 pt-6 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* Progress Indicators */}
           <div className="flex items-center gap-1.5 w-full sm:w-auto">
             {milestones.map((_, mIdx) => (
@@ -217,12 +216,13 @@ export default function CinemaModal({
                   sound.playTick(1200 + mIdx * 50)
                   setCurrentIdx(mIdx)
                 }}
+                aria-label={`Jump to milestone scene ${mIdx + 1}`}
                 className={`h-1.5 rounded-full transition-all ${
                   currentIdx === mIdx
-                    ? 'w-8 bg-[#e0a458]'
+                    ? 'w-8 bg-[#f59e0b]'
                     : mIdx < currentIdx
-                    ? 'w-3 bg-[#646b7e]'
-                    : 'w-3 bg-[#242836]'
+                    ? 'w-3 bg-[#64748b]'
+                    : 'w-3 bg-[#1e293b]'
                 }`}
               />
             ))}
@@ -233,23 +233,26 @@ export default function CinemaModal({
             <button
               onClick={handlePrev}
               disabled={currentIdx === 0}
-              className="p-2.5 rounded-xl bg-[#141722] text-[#8e95a7] hover:text-[#f5f2eb] disabled:opacity-30 transition-all"
+              aria-label="Previous scene"
+              className="p-3 rounded-xl bg-white/[0.05] text-[#94a3b8] hover:text-[#fbf9f5] disabled:opacity-30 transition-all focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
 
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#e0a458] text-[#0c0d12] font-bold text-xs font-mono-receipt hover:opacity-90 transition-all shadow-md"
+              aria-label={isPlaying ? 'Pause cinema auto-play' : 'Play cinema story'}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#f59e0b] text-[#07080b] font-bold text-xs font-mono-receipt hover:opacity-90 transition-all shadow-md focus-visible:ring-2 focus-visible:ring-white outline-none"
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              <span>{isPlaying ? 'PAUSE STORY' : 'RESUME PLAY'}</span>
+              <span>{isPlaying ? 'PAUSE' : 'PLAY'}</span>
             </button>
 
             <button
               onClick={handleNext}
               disabled={currentIdx === milestones.length - 1}
-              className="p-2.5 rounded-xl bg-[#141722] text-[#8e95a7] hover:text-[#f5f2eb] disabled:opacity-30 transition-all"
+              aria-label="Next scene"
+              className="p-3 rounded-xl bg-white/[0.05] text-[#94a3b8] hover:text-[#fbf9f5] disabled:opacity-30 transition-all focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none"
             >
               <ChevronRight className="w-5 h-5" />
             </button>

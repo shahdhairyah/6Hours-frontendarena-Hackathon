@@ -119,6 +119,29 @@ class SoundEngine {
     }
   }
 
+  // Harmonic mood sonification: maps mood and energy to pentatonic musical frequencies
+  playSonificationTone(mood = 'neutral', energy = 50) {
+    if (this.isMuted || !this.ctx) return
+    try {
+      const baseFreqs = {
+        melancholic: 220.0,  // A3 - deep contemplative
+        anxious: 246.94,      // B3 - searching
+        restless: 293.66,     // D4 - unsettled
+        wistful: 329.63,      // E4 - nostalgic
+        neutral: 349.23,      // F4 - ground level
+        hopeful: 392.0,       // G4 - uplifting
+        warm: 440.0,          // A4 - rich golden
+        driven: 493.88,       // B4 - purposeful
+        bright: 523.25,       // C5 - radiant
+      }
+      const base = baseFreqs[mood] || 392.0
+      const freq = base * (0.92 + (energy / 100) * 0.16)
+      this.playChime(freq, 'sine', 0.4)
+    } catch {
+      // safe fallback
+    }
+  }
+
   // Warm analog ambient tape drone
   startAmbient() {
     if (this.isMuted || !this.ctx || this.isAmbientPlaying) return

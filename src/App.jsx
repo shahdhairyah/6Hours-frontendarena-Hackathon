@@ -1,132 +1,66 @@
-import { useState, useEffect } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import Header from './components/Header'
-import StoryView from './components/StoryView'
-import LedgerView from './components/LedgerView'
-import ConstellationView from './components/ConstellationView'
-import InsightsView from './components/InsightsView'
-import CinemaModal from './components/CinemaModal'
-import ReceiptInspector from './components/ReceiptInspector'
-import ThermalReceiptModal from './components/ThermalReceiptModal'
-import UploadModal from './components/UploadModal'
+import { ErrorBoundary } from './components/common/ErrorBoundary'
+import { SkipLink } from './components/common/SkipLink'
+import { LoadingScreen } from './components/common/LoadingScreen'
+import { EngineProvider, useEngineContext } from './context/EngineContext'
+import { useBookmarks } from './hooks/useBookmarks'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { Keyboard } from 'lucide-react'
 
-import { loadEngine, buildEngineFromUnknown, buildEngine, resetEngine } from './engine/index'
-import { parseCsv } from './engine/csvLoader'
-import { RECEIPTS } from './data/receipts'
-import { sound } from './audio/soundEngine'
-import { Sparkles, Terminal, Heart, Keyboard } from 'lucide-react'
+// Code-split dynamic views for superior performance
+const StoryView = lazy(() => import('./components/StoryView'))
+const LedgerView = lazy(() => import('./components/LedgerView'))
+const ConstellationView = lazy(() => import('./components/ConstellationView'))
+const InsightsView = lazy(() => import('./components/InsightsView'))
+const CinemaModal = lazy(() => import('./components/CinemaModal'))
+const ReceiptInspector = lazy(() => import('./components/ReceiptInspector'))
+const ThermalReceiptModal = lazy(() => import('./components/ThermalReceiptModal'))
+const UploadModal = lazy(() => import('./components/UploadModal'))
 
-export default function App() {
-  const [engine, setEngine] = useState(null)
-  const [activeTab, setActiveTab] = useState('story')
+function MainContent() {
+  const {
+    engine,
+    isLoading,
+    activeTab,
+    setActiveTab,
+    selectedReceipt,
+    setSelectedReceipt,
+    isCinemaOpen,
+    setIsCinemaOpen,
+    isPrintOpen,
+    setIsPrintOpen,
+    isUploadOpen,
+    setIsUploadOpen,
+    isCustomData,
+    loadCustomCsv,
+    resetToBundled,
+    closeAllModals,
+  } = useEngineContext()
+
+  const { isBookmarked, toggleBookmark, bookmarkCount } = useBookmarks()
   const [activeFilterType, setActiveFilterType] = useState('all')
-  const [selectedReceipt, setSelectedReceipt] = useState(null)
-  const [isCinemaOpen, setIsCinemaOpen] = useState(false)
-  const [isPrintOpen, setIsPrintOpen] = useState(false)
-  const [isUploadOpen, setIsUploadOpen] = useState(false)
-  const [isCustomData, setIsCustomData] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isShowingSavedOnly, setIsShowingSavedOnly] = useState(false)
 
-  // Initialize and load the engine
-  useEffect(() => {
-    async function init() {
-      try {
-        const loaded = await loadEngine()
-        setEngine(loaded)
-      } catch (err) {
-        console.error('Failed to load CSV, falling back to bundled dataset:', err)
-        setEngine(buildEngine(RECEIPTS))
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    init()
-  }, [])
-
-  // Global Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Don't trigger if user is typing in an input or textarea
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
-
-      if (e.key === 'Escape') {
-        setSelectedReceipt(null)
-        setIsCinemaOpen(false)
-        setIsPrintOpen(false)
-        setIsUploadOpen(false)
-      } else if (e.key === '1') {
-        sound.playTick(1200)
-        setActiveTab('story')
-      } else if (e.key === '2') {
-        sound.playTick(1300)
-        setActiveTab('ledger')
-      } else if (e.key === '3') {
-        sound.playTick(1400)
-        setActiveTab('graph')
-      } else if (e.key === '4') {
-        sound.playTick(1500)
-        setActiveTab('insights')
-      } else if (e.key === ' ' && !isCinemaOpen) {
-        e.preventDefault()
-        sound.playChime(660)
-        setIsCinemaOpen(true)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isCinemaOpen])
-
-  // Custom CSV Ingestion Handler
-  const handleLoadCustomCsv = (rawCsvText) => {
-    try {
-      const rows = parseCsv(rawCsvText)
-      if (!rows || rows.length < 2) return false
-      const newEngine = buildEngineFromUnknown(rows)
-      if (newEngine && newEngine.receipts.length > 0) {
-        setEngine(newEngine)
-        setIsCustomData(true)
-        setSelectedReceipt(null)
-        return true
-      }
-      return false
-    } catch (err) {
-      console.error('Failed to parse custom CSV:', err)
-      return false
-    }
-  }
-
-  // Reset to original bundled Kaggle dataset
-  const handleResetBundled = () => {
-    resetEngine()
-    const original = buildEngine(RECEIPTS)
-    setEngine(original)
-    setIsCustomData(false)
-    setSelectedReceipt(null)
-  }
+  // Keyboard shortcut listener
+  useKeyboardShortcuts({
+    onSelectTab: (tab) => setActiveTab(tab),
+    onOpenCinema: () => setIsCinemaOpen(true),
+    onCloseModals: closeAllModals,
+    isModalOpen: isCinemaOpen || isPrintOpen || isUploadOpen || Boolean(selectedReceipt),
+  })
 
   if (isLoading || !engine) {
-    return (
-      <div className="min-h-screen bg-[#0a0b0e] flex flex-col items-center justify-center space-y-4 text-center px-4">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#e0a458] to-[#d2869a] flex items-center justify-center text-[#0b0c10] font-mono-receipt font-bold text-xl animate-pulse shadow-xl">
-          §
-        </div>
-        <div className="space-y-1">
-          <h2 className="font-serif-story text-2xl text-[#f5f2eb]">
-            Reading The Ledger...
-          </h2>
-          <p className="text-xs font-mono-receipt text-[#788195]">
-            Segmenting chapters, weaving emotional threads & calculating circadian curves
-          </p>
-        </div>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   const { receipts, chapters, threads, stats, narrative } = engine
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0a0b0e] text-[#ededed] font-sans-ui selection:bg-[#e0a458]/30 selection:text-[#f7e4c8]">
-      {/* Primary Header & Navigation */}
+    <div className="min-h-screen flex flex-col bg-[#07080b] text-[#ededed] font-sans-ui selection:bg-[#f59e0b]/30 selection:text-[#f7e4c8]">
+      <SkipLink />
+
+      {/* Accessible Header */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -135,70 +69,80 @@ export default function App() {
         onOpenPrint={() => setIsPrintOpen(true)}
         onOpenUpload={() => setIsUploadOpen(true)}
         isCustomData={isCustomData}
+        bookmarkCount={bookmarkCount}
+        isShowingSavedOnly={isShowingSavedOnly}
+        onToggleSavedOnly={() => {
+          setIsShowingSavedOnly(!isShowingSavedOnly)
+          if (activeTab !== 'ledger') setActiveTab('ledger')
+        }}
       />
 
-      {/* Main View Area */}
-      <main className="flex-1 pb-16">
-        {activeTab === 'story' && (
-          <StoryView
-            narrative={narrative}
-            chapters={chapters}
-            stats={stats}
-            threads={threads}
-            onSelectReceipt={(r) => setSelectedReceipt(r)}
-            onSwitchTab={(tab) => {
-              sound.playTick(1300)
-              setActiveTab(tab)
-            }}
-          />
-        )}
+      {/* Main View Area with Suspense boundary */}
+      <main id="main-content" className="flex-1 pb-16 focus:outline-none" tabIndex={-1}>
+        <Suspense fallback={<div className="p-16 text-center text-xs font-mono-receipt text-[#94a3b8]">Loading view...</div>}>
+          {activeTab === 'story' && (
+            <StoryView
+              receipts={receipts}
+              narrative={narrative}
+              chapters={chapters}
+              stats={stats}
+              threads={threads}
+              onSelectReceipt={(r) => setSelectedReceipt(r)}
+              onSwitchTab={(tab) => setActiveTab(tab)}
+              isBookmarked={isBookmarked}
+              onToggleBookmark={toggleBookmark}
+            />
+          )}
 
-        {activeTab === 'ledger' && (
-          <LedgerView
-            receipts={receipts}
-            chapters={chapters}
-            threads={threads}
-            onSelectReceipt={(r) => setSelectedReceipt(r)}
-            activeFilterType={activeFilterType}
-            setActiveFilterType={setActiveFilterType}
-          />
-        )}
+          {activeTab === 'ledger' && (
+            <LedgerView
+              receipts={receipts}
+              chapters={chapters}
+              threads={threads}
+              onSelectReceipt={(r) => setSelectedReceipt(r)}
+              activeFilterType={activeFilterType}
+              setActiveFilterType={setActiveFilterType}
+              isBookmarked={isBookmarked}
+              onToggleBookmark={toggleBookmark}
+              isShowingSavedOnly={isShowingSavedOnly}
+              onToggleSavedOnly={() => setIsShowingSavedOnly(!isShowingSavedOnly)}
+            />
+          )}
 
-        {activeTab === 'graph' && (
-          <ConstellationView
-            receipts={receipts}
-            chapters={chapters}
-            threads={threads}
-            onSelectReceipt={(r) => setSelectedReceipt(r)}
-          />
-        )}
+          {activeTab === 'graph' && (
+            <ConstellationView
+              receipts={receipts}
+              chapters={chapters}
+              threads={threads}
+              onSelectReceipt={(r) => setSelectedReceipt(r)}
+            />
+          )}
 
-        {activeTab === 'insights' && (
-          <InsightsView
-            narrative={narrative}
-            stats={stats}
-            chapters={chapters}
-            onSelectReceipt={(r) => setSelectedReceipt(r)}
-            onSwitchTab={(tab) => {
-              sound.playTick(1300)
-              setActiveTab(tab)
-            }}
-          />
-        )}
+          {activeTab === 'insights' && (
+            <InsightsView
+              narrative={narrative}
+              stats={stats}
+              chapters={chapters}
+              receipts={receipts}
+              onSelectReceipt={(r) => setSelectedReceipt(r)}
+              onSwitchTab={(tab) => setActiveTab(tab)}
+            />
+          )}
+        </Suspense>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[#181a24] bg-[#0c0d12] py-8 text-xs font-mono-receipt text-[#62697b]">
+      {/* Accessible Footer */}
+      <footer role="contentinfo" className="border-t border-white/[0.06] bg-[#08090d] py-8 text-xs font-mono-receipt text-[#94a3b8]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-[#b0b8cb]">LEDGER</span>
+            <span className="font-bold text-[#fbf9f5]">LEDGER</span>
             <span>//</span>
-            <span>Your Life, In Receipts · Hackathon Experience</span>
+            <span>Your Life, In Receipts · Hackathon Digital Experience</span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px] text-[#565d70]">
-            <span className="hidden md:flex items-center gap-1">
-              <Keyboard className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-4 text-[11px] text-[#94a3b8]">
+            <span className="hidden md:flex items-center gap-1.5">
+              <Keyboard className="w-3.5 h-3.5 text-[#f59e0b]" aria-hidden="true" />
               <span>Keys: [1] Story [2] Ledger [3] Echoes [4] Patterns [Space] Cinema [Esc] Close</span>
             </span>
             <span>·</span>
@@ -207,39 +151,53 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Overlays & Modals */}
-      <CinemaModal
-        isOpen={isCinemaOpen}
-        onClose={() => setIsCinemaOpen(false)}
-        receipts={receipts}
-        chapters={chapters}
-        threads={threads}
-        onSelectReceipt={(r) => setSelectedReceipt(r)}
-      />
+      {/* Lazy Overlays & Modals */}
+      <Suspense fallback={null}>
+        <CinemaModal
+          isOpen={isCinemaOpen}
+          onClose={() => setIsCinemaOpen(false)}
+          receipts={receipts}
+          chapters={chapters}
+          threads={threads}
+          onSelectReceipt={(r) => setSelectedReceipt(r)}
+        />
 
-      <ReceiptInspector
-        receipt={selectedReceipt}
-        onClose={() => setSelectedReceipt(null)}
-        threads={threads}
-        onSelectReceipt={(r) => setSelectedReceipt(r)}
-      />
+        <ReceiptInspector
+          receipt={selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+          threads={threads}
+          onSelectReceipt={(r) => setSelectedReceipt(r)}
+          isBookmarked={isBookmarked}
+          onToggleBookmark={toggleBookmark}
+        />
 
-      <ThermalReceiptModal
-        isOpen={isPrintOpen}
-        onClose={() => setIsPrintOpen(false)}
-        receipts={receipts}
-        chapters={chapters}
-        stats={stats}
-      />
+        <ThermalReceiptModal
+          isOpen={isPrintOpen}
+          onClose={() => setIsPrintOpen(false)}
+          receipts={receipts}
+          chapters={chapters}
+          stats={stats}
+        />
 
-      <UploadModal
-        isOpen={isUploadOpen}
-        onClose={() => setIsUploadOpen(false)}
-        onLoadCustomCsv={handleLoadCustomCsv}
-        onResetBundled={handleResetBundled}
-        isCustomData={isCustomData}
-        currentCount={receipts.length}
-      />
+        <UploadModal
+          isOpen={isUploadOpen}
+          onClose={() => setIsUploadOpen(false)}
+          onLoadCustomCsv={loadCustomCsv}
+          onResetBundled={resetToBundled}
+          isCustomData={isCustomData}
+          currentCount={receipts.length}
+        />
+      </Suspense>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <EngineProvider>
+        <MainContent />
+      </EngineProvider>
+    </ErrorBoundary>
   )
 }

@@ -1,20 +1,14 @@
 import { fmtDate, fmtDateShort, fmtMonth } from './preprocess.js'
-import { TYPE_META, MOOD_META } from './types.js'
 
 const q = (s) => `“${s}”`
-
-const sum = (xs) => xs.reduce((s, x) => s + x, 0)
 
 const inHour = (r, lo, hi) => r.hour >= lo && r.hour < hi
 
 const pick = (recs, pred) => recs.find(pred) || null
 
-const kindT = (r) => TYPE_META[r.type]?.label || r.type
-
 export function buildNarrative(receipts, chapters, stats, threads) {
   const first = receipts[0]
   const last = receipts[receipts.length - 1]
-  const byId = threads.byId
 
   // ---- prologue ----------------------------------------------------------
   const firstMessage = pick(receipts, (r) => r.type === 'message')
@@ -43,18 +37,14 @@ export function buildNarrative(receipts, chapters, stats, threads) {
 }
 
 // ---------------------------------------------------------------------------
-function chapterProse(ch, receipts, idx, stats) {
-  const earlier = idx === 0 ? receipts.slice(0, ch.recs.length) : null
+function chapterProse(ch, _receipts, _idx, _stats) {
   const recs = ch.recs
-  const all = receipts
-  const dom = (t) => TYPE_META[t]?.label.toLowerCase()
   const force = (n) => String(n).toLocaleString('en-GB')
 
   const paras = []
 
   if (ch.theme === 'wander') {
     const flight = pick(recs, (r) => r.tags.includes('travel') && r.type === 'purchase')
-    const photo = pick(recs, (r) => r.type === 'photo')
     const fado = pick(recs, (r) => r.heading.includes('Fado'))
     paras.push(
       `It begins the way change usually does: with a search box. ${q(pick(recs, (r) => r.type === 'search')?.heading || '"…"')}, followed a month later by a receipt for a backpack. The chapter is composed in ${force(recs.length)} receipts — places stamping in from Lisbon, Porto and the Alps, photographs taken from windows and trams, purchases made in a currency you had to think about.`
@@ -81,7 +71,6 @@ function chapterProse(ch, receipts, idx, stats) {
   }
 
   if (ch.theme === 'anchor') {
-    const firstM = pick(recs, (r) => r.tags.includes('first-message'))
     const kiln = pick(recs, (r) => r.tags.includes('the-kiln'))
     paras.push(
       `Into the ledger walks ${q('from Maya')} — a message that begins with a festival and ends, eighteen receipts later, with two flat whites and a shared table. The data can't tell you how it felt. But it can tell you the shape of it: messages become a conversation, purchases become pairs (${recs.filter((r) => r.tags.includes('together') || r.tags.includes('pair')).length} of them), and the photographs start including ${q('hers')} in the caption.`
@@ -137,7 +126,7 @@ function chapterBeats(ch) {
 }
 
 // ---------------------------------------------------------------------------
-function buildInsights(receipts, chapters, stats, threads) {
+function buildInsights(receipts, chapters, stats, _threads) {
   const nightCh = chapters.find((c) => c.theme === 'night')
   const insight = (no, title, body, ids) => ({ no, title, body, ids: ids.slice(0, 6) })
 

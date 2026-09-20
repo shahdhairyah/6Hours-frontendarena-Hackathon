@@ -2,15 +2,16 @@ import { useState } from 'react'
 import {
   X,
   UploadCloud,
-  FileText,
   RotateCcw,
   CheckCircle2,
   AlertCircle,
-  Database,
-  ArrowRight
+  Database
 } from 'lucide-react'
 import { sound } from '../audio/soundEngine'
 
+/**
+ * UploadModal: Ingest custom Kaggle life receipts CSV and dynamically recalculate story arcs.
+ */
 export default function UploadModal({
   isOpen,
   onClose,
@@ -63,52 +64,59 @@ export default function UploadModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050608]/85 backdrop-blur-md p-4 animate-in fade-in">
-      <div className="relative w-full max-w-lg rounded-2xl bg-[#11131b] border border-[#262a3c] shadow-2xl p-6 space-y-6">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="upload-heading"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#050608]/85 backdrop-blur-md p-4 animate-in fade-in"
+    >
+      <div className="relative w-full max-w-lg rounded-3xl bg-[#0e1017] border border-white/[0.08] shadow-2xl p-6 sm:p-8 space-y-6">
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-[#1f2434]">
-          <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-[#e0a458]" />
-            <span className="text-xs font-mono-receipt font-bold text-[#f0ede6]">
+        <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+          <div className="flex items-center gap-2.5">
+            <Database className="w-4 h-4 text-[#f59e0b]" aria-hidden="true" />
+            <span id="upload-heading" className="text-xs font-mono-receipt font-bold text-[#fbf9f5]">
               DATASET & KAGGLE CSV INGESTION
             </span>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-[#161924] text-[#80889b] hover:text-[#f0f3fa]"
+            aria-label="Close upload dialog"
+            className="p-1.5 rounded-xl bg-white/[0.04] text-[#94a3b8] hover:text-[#fbf9f5] focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Current Status */}
-        <div className="p-3.5 rounded-xl bg-[#161824] border border-[#24293a] flex items-center justify-between text-xs font-mono-receipt">
+        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between text-xs font-mono-receipt">
           <div className="space-y-0.5">
-            <span className="text-[#6d7589] block">ACTIVE DATASET:</span>
-            <span className="font-bold text-[#f5f2eb]">
+            <span className="text-[#94a3b8] block">ACTIVE LEDGER DATASET:</span>
+            <span className="font-bold text-[#fbf9f5]">
               {isCustomData ? 'Custom Ingested CSV' : 'Official Kaggle 466-Record Dataset'}
             </span>
           </div>
-          <span className="px-2 py-1 rounded bg-[#e0a458]/15 text-[#e0a458] border border-[#e0a458]/30">
-            {currentCount} Moments Loaded
+          <span className="px-3 py-1 rounded-full bg-[#f59e0b]/15 text-[#f59e0b] border border-[#f59e0b]/30">
+            {currentCount} Moments
           </span>
         </div>
 
         {/* Drag & Drop Upload Zone */}
         <div className="space-y-3">
-          <label className="text-xs font-mono-receipt text-[#8a92a5] block">
-            Upload CSV File:
+          <label htmlFor="csv-file-input" className="text-xs font-mono-receipt text-[#cbd5e1] block">
+            Upload Kaggle CSV File:
           </label>
-          <label className="border-2 border-dashed border-[#2d3348] hover:border-[#e0a458]/60 bg-[#0d0f16] rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors group">
-            <UploadCloud className="w-8 h-8 text-[#5c657a] group-hover:text-[#e0a458] transition-colors" />
-            <span className="text-xs font-mono-receipt text-[#a4acc0]">
-              Click to browse or drop Kaggle <code className="text-[#e0a458]">receipts.csv</code>
+          <label className="border-2 border-dashed border-white/[0.1] hover:border-[#f59e0b]/60 bg-[#07080c] rounded-2xl p-8 flex flex-col items-center justify-center gap-2.5 cursor-pointer transition-colors group">
+            <UploadCloud className="w-8 h-8 text-[#64748b] group-hover:text-[#f59e0b] transition-colors" />
+            <span className="text-xs font-mono-receipt text-[#cbd5e1]">
+              Click to browse or drop Kaggle <code className="text-[#f59e0b]">receipts.csv</code>
             </span>
-            <span className="text-[10px] font-mono-receipt text-[#5f677a]">
-              Supports standard format (id, type, at, heading, body, mood, tags)
+            <span className="text-[10px] font-mono-receipt text-[#94a3b8]">
+              Expected columns: id, type, at, heading, body, mood, tags, city
             </span>
             <input
+              id="csv-file-input"
               type="file"
               accept=".csv"
               onChange={handleFileUpload}
@@ -119,36 +127,37 @@ export default function UploadModal({
 
         {/* Paste Raw CSV Alternative */}
         <div className="space-y-2">
-          <label className="text-xs font-mono-receipt text-[#8a92a5] block">
+          <label htmlFor="csv-text-area" className="text-xs font-mono-receipt text-[#cbd5e1] block">
             Or Paste Raw CSV Content:
           </label>
           <textarea
+            id="csv-text-area"
             rows={3}
             value={csvText}
             onChange={(e) => setCsvText(e.target.value)}
             placeholder="id,type,at,heading,body,tags,mood,energy,amount,currency..."
-            className="w-full p-3 rounded-xl bg-[#0b0c12] border border-[#222738] text-xs font-mono-receipt text-[#e8eaef] placeholder-[#4d5366] focus:outline-none focus:border-[#e0a458]"
+            className="w-full p-3.5 rounded-2xl bg-[#07080c] border border-white/[0.08] text-xs font-mono-receipt text-[#fbf9f5] placeholder-[#64748b] focus:outline-none focus:border-[#f59e0b]"
           />
           {csvText.trim() && (
             <button
               onClick={handlePasteSubmit}
-              className="w-full py-2 rounded-xl bg-[#e0a458] text-[#0d0f14] font-mono-receipt font-bold text-xs hover:opacity-90 transition-all"
+              className="w-full py-2.5 rounded-xl bg-[#f59e0b] text-[#07080b] font-mono-receipt font-bold text-xs hover:opacity-90 transition-all shadow-md active:scale-98"
             >
-              Parse & Build Story From Text
+              Parse & Rebuild Story From CSV Text
             </button>
           )}
         </div>
 
         {/* Feedback Messages */}
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-[#d0675c]/15 border border-[#d0675c]/40 text-[#f29a91] text-xs font-mono-receipt flex items-center gap-2">
+          <div role="alert" className="p-3.5 rounded-2xl bg-[#f43f5e]/15 border border-[#f43f5e]/40 text-[#fca5a5] text-xs font-mono-receipt flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {statusMsg && (
-          <div className="p-3 rounded-xl bg-[#5da88b]/15 border border-[#5da88b]/40 text-[#7fc6a8] text-xs font-mono-receipt flex items-center gap-2">
+          <div role="status" className="p-3.5 rounded-2xl bg-[#10b981]/15 border border-[#10b981]/40 text-[#6ee7b7] text-xs font-mono-receipt flex items-center gap-2.5">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{statusMsg}</span>
           </div>
@@ -156,14 +165,14 @@ export default function UploadModal({
 
         {/* Reset to Bundled Kaggle Dataset */}
         {isCustomData && (
-          <div className="pt-2 border-t border-[#1e2332]">
+          <div className="pt-2 border-t border-white/[0.08]">
             <button
               onClick={() => {
                 sound.playTick(1000)
                 onResetBundled()
                 onClose()
               }}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-mono-receipt bg-[#1a1d29] hover:bg-[#222636] text-[#b0b8cb] border border-[#2b3144] transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-mono-receipt bg-white/[0.03] hover:bg-white/[0.07] text-[#cbd5e1] border border-white/[0.08] transition-colors focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset to Original 466 Kaggle Receipts</span>

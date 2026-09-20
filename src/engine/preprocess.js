@@ -1,10 +1,49 @@
-import { MOODS, TYPE_META, TYPES } from './types.js'
+import { MOODS, TYPES } from './types.js'
 
+/**
+ * @typedef {'music' | 'film' | 'place' | 'purchase' | 'photo' | 'message' | 'search' | 'event' | 'note'} ReceiptType
+ * @typedef {'bright' | 'warm' | 'driven' | 'hopeful' | 'wistful' | 'restless' | 'anxious' | 'melancholic' | 'neutral'} ReceiptMood
+ * @typedef {'night' | 'early' | 'day' | 'evening'} TimeOfDay
+ *
+ * @typedef {Object} EnrichedReceipt
+ * @property {string} id Unique receipt identifier (e.g., 'r0001')
+ * @property {ReceiptType} type Activity category
+ * @property {string} at ISO 8601 UTC timestamp
+ * @property {Date} dt Parsed JavaScript Date object
+ * @property {number} hour UTC hour (0-23)
+ * @property {number} min UTC minute (0-59)
+ * @property {TimeOfDay} timeOfDay Circadian day segment
+ * @property {boolean} isNight Whether timestamp falls between 22:00 and 06:00
+ * @property {string} heading Primary receipt title or query
+ * @property {string} body Contextual details, merchant, or message excerpt
+ * @property {string[]} tags List of normalized tag strings
+ * @property {ReceiptMood} mood Emotional sentiment classification
+ * @property {number} energy Energy level between 10 and 90
+ * @property {number|null} amount Transaction cost if purchase
+ * @property {string|null} currency Currency sign (£, €)
+ * @property {number|null} lat Latitude coordinate
+ * @property {number|null} lng Longitude coordinate
+ * @property {string|null} city City name
+ * @property {string|null} counterpart Interaction partner (e.g., 'Maya')
+ * @property {string[]} themes Array of deduced semantic themes
+ * @property {string} text Combined searchable string
+ */
+
+/**
+ * Extracts UTC hour from a Date object.
+ * @param {Date} dt - Input date
+ * @returns {number} UTC hour (0-23)
+ */
 export function hourOf(dt) {
   const h = dt.getUTCHours()
   return h
 }
 
+/**
+ * Classifies a timestamp into a circadian timeframe bucket.
+ * @param {Date} dt - Input date
+ * @returns {TimeOfDay} One of 'night', 'early', 'day', 'evening'
+ */
 export function timeOfDayOf(dt) {
   const h = dt.getUTCHours()
   if (h >= 22 || h < 6) return 'night'
@@ -13,12 +52,27 @@ export function timeOfDayOf(dt) {
   return 'evening'
 }
 
+/**
+ * Formats a Date object into a readable British date string (e.g. '14 Jan 2024').
+ * @param {Date} d
+ * @returns {string}
+ */
 export const fmtDate = (d) =>
   new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(d)
 
+/**
+ * Formats a Date object into a short date string.
+ * @param {Date} d
+ * @returns {string}
+ */
 export const fmtDateShort = (d) =>
   new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(d)
 
+/**
+ * Formats a Date object into a 24-hour time string (e.g. '02:30').
+ * @param {Date} d
+ * @returns {string}
+ */
 export const fmtTime = (d) =>
   new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(d)
 
@@ -137,7 +191,6 @@ export function isValidReceipt(r) {
 }
 
 export function normalizeReceipt(raw) {
-  const dt = new Date(raw.at)
   if (isValidReceipt(raw)) {
     return {
       ...raw,

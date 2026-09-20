@@ -1,6 +1,3 @@
-import { TYPES } from './types.js'
-import { fmtDateShort } from './preprocess.js'
-
 const MIN = 60000
 const DAY = 86400000
 
@@ -88,6 +85,31 @@ function scorePair(a, b) {
   return { score, links }
 }
 
+/**
+ * @typedef {Object} ThreadEdge
+ * @property {string} a ID of first receipt
+ * @property {string} b ID of second receipt
+ * @property {number} score Connection strength score
+ * @property {'motion' | 'echo'} kind Proximity type
+ * @property {boolean} echo Whether link crosses chapters
+ * @property {Array<{kind: string, label: string, theme?: string}>} links Detailed link rationales
+ * @property {string} label Descriptive relation summary
+ * @property {number} days Temporal distance in calendar days
+ */
+
+/**
+ * Constructs an adjacency graph of connected life moments and thematic echoes.
+ * @param {Array<Object>} receipts Preprocessed receipts array
+ * @param {Array<Object>} chapters Segmented chapter array
+ * @returns {{
+ *   byId: Map<string, Object>,
+ *   adjacency: Map<string, ThreadEdge[]>,
+ *   edges: ThreadEdge[],
+ *   moments: Array<{ids: string[], dayKey: string, start: Date, recs: Object[], types: string[], themes: string[]}>,
+ *   echoEdges: ThreadEdge[],
+ *   countByKind: Record<string, number>
+ * }}
+ */
 export function buildThreads(receipts, chapters) {
   const byId = new Map(receipts.map((r) => [r.id, r]))
   const chapterByDay = new Map()

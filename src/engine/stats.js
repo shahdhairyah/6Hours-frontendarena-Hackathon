@@ -1,16 +1,16 @@
-import { MOOD_WEIGHT, MOOD_ORDER, TYPES, TYPE_META } from './types.js'
+import { MOOD_WEIGHT } from './types.js'
 import { fmtMonth } from './preprocess.js'
 
 const DAY = 86400000
 
-export function computeStats(receipts, chapters) {
+export function computeStats(receipts, _chapters) {
   const n = receipts.length
   if (!n) return {}
 
   const byType = {}
   const byMonth = {}
   const byDay = {}
-  const byHour = new Array(24).fill(0)
+  const byHour = Array.from({ length: 24 }, () => 0)
   const seenDays = new Set()
   const moods = {}
 

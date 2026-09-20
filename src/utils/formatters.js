@@ -7,6 +7,7 @@ export const fmtDate = (d) => {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   }).format(date)
 }
 
@@ -16,6 +17,7 @@ export const fmtDateShort = (d) => {
   return new Intl.DateTimeFormat('en-GB', {
     day: 'numeric',
     month: 'short',
+    timeZone: 'UTC',
   }).format(date)
 }
 
@@ -26,6 +28,7 @@ export const fmtTime = (d) => {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    timeZone: 'UTC',
   }).format(date)
 }
 
@@ -35,6 +38,7 @@ export const fmtMonthYear = (d) => {
   return new Intl.DateTimeFormat('en-GB', {
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   }).format(date)
 }
 

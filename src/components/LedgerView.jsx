@@ -1,32 +1,29 @@
 import { useState, useMemo } from 'react'
 import {
   Search,
-  Filter,
-  SlidersHorizontal,
-  ArrowUpDown,
-  Calendar,
-  Clock,
-  MapPin,
-  Tag,
-  Sparkles,
-  DollarSign,
   ChevronRight,
   X,
-  Volume2,
-  Bookmark,
-  Check
+  Star
 } from 'lucide-react'
-import { TYPES, TYPE_META, MOODS, MOOD_META, TIME_BUCKETS, TIME_OF_DAY } from '../engine/types'
-import { fmtDate, fmtDateShort, fmtTime, fmtCurrency } from '../utils/formatters'
+import { TYPES, TYPE_META, MOODS, MOOD_META } from '../engine/types'
+import { fmtDate, fmtDateShort, fmtCurrency } from '../utils/formatters'
 import { sound } from '../audio/soundEngine'
+import { STORY_PRESETS } from '../constants/index'
 
+/**
+ * LedgerView: Realistic continuous thermal paper roll with instant search, presets, and bookmarks.
+ */
 export default function LedgerView({
   receipts,
   chapters,
   threads,
   onSelectReceipt,
   activeFilterType,
-  setActiveFilterType
+  setActiveFilterType,
+  isBookmarked,
+  onToggleBookmark,
+  isShowingSavedOnly,
+  onToggleSavedOnly
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMood, setSelectedMood] = useState('all')
@@ -34,20 +31,12 @@ export default function LedgerView({
   const [selectedChapter, setSelectedChapter] = useState('all')
   const [sortBy, setSortBy] = useState('chronological-asc')
   const [activePreset, setActivePreset] = useState('all')
-
-  // Curated Hackathon Quick Presets
-  const presets = [
-    { id: 'all', label: 'All 466 Receipts', icon: '🧾' },
-    { id: '2am', label: 'The 2 AM Curve', icon: '🌙' },
-    { id: 'maya', label: 'Maya Connection', icon: '❤️' },
-    { id: 'lisbon', label: 'Lisbon Odyssey', icon: '✈️' },
-    { id: 'kiln', label: 'The Kiln Cafe', icon: '☕' },
-    { id: 'maker', label: 'The Maker Hours', icon: '🎨' },
-  ]
+  const [visibleCount, setVisibleCount] = useState(35)
 
   const applyPreset = (presetId) => {
     sound.playTick(1300)
     setActivePreset(presetId)
+    setVisibleCount(35)
     if (presetId === 'all') {
       clearAllFilters()
     } else if (presetId === '2am') {
@@ -71,6 +60,11 @@ export default function LedgerView({
   // Filtering & Sorting pipeline
   const filteredReceipts = useMemo(() => {
     let list = receipts
+
+    // Bookmarked only filter
+    if (isShowingSavedOnly && isBookmarked) {
+      list = list.filter((r) => isBookmarked(r.id))
+    }
 
     // Type filter
     if (activeFilterType && activeFilterType !== 'all') {
@@ -124,7 +118,18 @@ export default function LedgerView({
     }
 
     return sorted
-  }, [receipts, chapters, activeFilterType, selectedMood, selectedTimeBucket, selectedChapter, searchQuery, sortBy])
+  }, [
+    receipts,
+    chapters,
+    activeFilterType,
+    selectedMood,
+    selectedTimeBucket,
+    selectedChapter,
+    searchQuery,
+    sortBy,
+    isShowingSavedOnly,
+    isBookmarked,
+  ])
 
   const clearAllFilters = () => {
     sound.playTick(1000)
@@ -135,7 +140,12 @@ export default function LedgerView({
     setSelectedChapter('all')
     setSortBy('chronological-asc')
     setActivePreset('all')
+    setVisibleCount(35)
   }
+
+  const visibleReceipts = useMemo(() => {
+    return filteredReceipts.slice(0, visibleCount)
+  }, [filteredReceipts, visibleCount])
 
   const hasActiveFilters =
     searchQuery ||
@@ -143,39 +153,60 @@ export default function LedgerView({
     selectedMood !== 'all' ||
     selectedTimeBucket !== 'all' ||
     selectedChapter !== 'all' ||
-    sortBy !== 'chronological-asc'
+    sortBy !== 'chronological-asc' ||
+    isShowingSavedOnly
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div
+      role="tabpanel"
+      id="panel-ledger"
+      aria-labelledby="tab-ledger"
+      className="max-w-5xl mx-auto px-4 py-8 space-y-8"
+    >
+      {/* Accessible live status region for screen readers */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        Showing {visibleReceipts.length} of {filteredReceipts.length} life moments matching selected criteria.
+      </div>
       {/* Search, Preset & Filter Control Dock */}
       <div className="rounded-3xl border border-white/[0.08] bg-[#0d0f17] p-6 space-y-6 shadow-2xl">
         {/* Curated Story Presets */}
         <div className="space-y-2">
-          <span className="text-[10px] font-mono-receipt uppercase tracking-widest text-[#666d80] block">
+          <span className="text-[10px] font-mono-receipt uppercase tracking-widest text-[#94a3b8] block">
             Curated Story Presets
           </span>
           <div className="flex items-center gap-2 flex-wrap">
-            {presets.map((preset) => (
+            {STORY_PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 onClick={() => applyPreset(preset.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono-receipt transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono-receipt transition-all focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none ${
                   activePreset === preset.id
                     ? 'bg-[#f59e0b] text-[#07080b] font-bold shadow-[0_0_15px_rgba(245,158,11,0.3)]'
-                    : 'bg-[#141622] border border-white/[0.06] text-[#8e95a7] hover:bg-[#1a1e2e] hover:text-[#fbf9f5]'
+                    : 'bg-[#141622] border border-white/[0.06] text-[#cbd5e1] hover:bg-[#1a1e2e] hover:text-[#fbf9f5]'
                 }`}
               >
                 <span>{preset.icon}</span>
                 <span>{preset.label}</span>
               </button>
             ))}
+
+            {isShowingSavedOnly && (
+              <button
+                onClick={onToggleSavedOnly}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono-receipt bg-[#f59e0b]/20 border border-[#f59e0b] text-[#f59e0b] font-bold"
+              >
+                <Star className="w-3.5 h-3.5 fill-[#f59e0b]" />
+                <span>Showing Saved Only</span>
+                <X className="w-3 h-3 ml-1" />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Search Bar & Sort Dropdown */}
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 text-[#61687a] absolute left-4 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#94a3b8] absolute left-4 top-1/2 -translate-y-1/2" aria-hidden="true" />
             <input
               type="text"
               value={searchQuery}
@@ -183,13 +214,15 @@ export default function LedgerView({
                 setSearchQuery(e.target.value)
                 setActivePreset('custom')
               }}
+              aria-label="Search receipts by cafe, artist, Maya, flight, tag, or note"
               placeholder="Search receipts by cafe, artist, Maya, flight, tag, or note..."
-              className="w-full pl-11 pr-10 py-3 rounded-2xl bg-[#08090f] border border-white/[0.08] text-sm text-[#fbf9f5] placeholder-[#505668] focus:outline-none focus:border-[#f59e0b]/60 transition-colors font-sans-ui"
+              className="w-full pl-11 pr-10 py-3 rounded-2xl bg-[#08090f] border border-white/[0.08] text-sm text-[#fbf9f5] placeholder-[#94a3b8] focus:outline-none focus:border-[#f59e0b]/60 transition-colors font-sans-ui"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#61687a] hover:text-[#fbf9f5]"
+                aria-label="Clear search query"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#fbf9f5]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -200,7 +233,8 @@ export default function LedgerView({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-[#08090f] border border-white/[0.08] text-xs font-mono-receipt text-[#b0b7c9] focus:outline-none focus:border-[#f59e0b]/60"
+              aria-label="Sort receipts order"
+              className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-[#08090f] border border-white/[0.08] text-xs font-mono-receipt text-[#cbd5e1] focus:outline-none focus:border-[#f59e0b]/60"
             >
               <option value="chronological-asc">Time: Oldest First</option>
               <option value="chronological-desc">Time: Newest First</option>
@@ -211,7 +245,8 @@ export default function LedgerView({
             {hasActiveFilters && (
               <button
                 onClick={clearAllFilters}
-                className="shrink-0 px-3.5 py-3 rounded-2xl text-xs font-mono-receipt text-[#fb7185] bg-[#fb7185]/10 hover:bg-[#fb7185]/20 border border-[#fb7185]/30 transition-all"
+                aria-label="Reset all search and filter settings"
+                className="shrink-0 px-3.5 py-3 rounded-2xl text-xs font-mono-receipt text-[#fb7185] bg-[#fb7185]/10 hover:bg-[#fb7185]/20 border border-[#fb7185]/30 transition-all focus-visible:ring-2 focus-visible:ring-[#fb7185] outline-none"
               >
                 Reset
               </button>
@@ -222,7 +257,7 @@ export default function LedgerView({
         {/* Activity Type Filters */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-[11px] font-mono-receipt">
-            <span className="uppercase tracking-widest text-[#666e80]">
+            <span className="uppercase tracking-widest text-[#94a3b8]">
               Filter By Activity
             </span>
             <span className="text-[#f59e0b]">
@@ -236,10 +271,10 @@ export default function LedgerView({
                 sound.playTick(1200)
                 setActiveFilterType('all')
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono-receipt transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono-receipt transition-all focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none ${
                 activeFilterType === 'all'
                   ? 'bg-white/[0.15] text-[#fbf9f5] font-bold border border-white/[0.2]'
-                  : 'bg-[#12141f] text-[#7d8597] hover:bg-[#181a28] hover:text-[#d4d9e5] border border-white/[0.04]'
+                  : 'bg-[#12141f] text-[#cbd5e1] hover:bg-[#181a28] hover:text-[#fbf9f5] border border-white/[0.04]'
               }`}
             >
               All Types ({receipts.length})
@@ -257,15 +292,15 @@ export default function LedgerView({
                     sound.playTick(1300)
                     setActiveFilterType(isSelected ? 'all' : type)
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono-receipt transition-all border ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono-receipt transition-all border focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none ${
                     isSelected
                       ? 'border-[#f59e0b] bg-[#f59e0b]/20 text-[#fbf9f5] font-bold shadow-sm'
-                      : 'border-white/[0.04] bg-[#12141f] text-[#7d8597] hover:bg-[#181a28] hover:text-[#d4d9e5]'
+                      : 'border-white/[0.04] bg-[#12141f] text-[#cbd5e1] hover:bg-[#181a28] hover:text-[#fbf9f5]'
                   }`}
                 >
                   <span style={{ color: meta.color }}>{meta.short}</span>
                   <span>{meta.label}</span>
-                  <span className="text-[10px] opacity-60">({count})</span>
+                  <span className="text-[10px] opacity-70">({count})</span>
                 </button>
               )
             })}
@@ -275,13 +310,14 @@ export default function LedgerView({
         {/* Secondary Filter Dropdowns */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-white/[0.06]">
           <div>
-            <label className="block text-[10px] font-mono-receipt uppercase tracking-widest text-[#5d6475] mb-1.5">
+            <label htmlFor="mood-filter-select" className="block text-[10px] font-mono-receipt uppercase tracking-widest text-[#94a3b8] mb-1.5">
               Emotional Mood
             </label>
             <select
+              id="mood-filter-select"
               value={selectedMood}
               onChange={(e) => setSelectedMood(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-[#08090f] border border-white/[0.08] text-xs font-mono-receipt text-[#b0b7c9] focus:outline-none focus:border-[#f59e0b]"
+              className="w-full px-3.5 py-2 rounded-xl bg-[#08090f] border border-white/[0.08] text-xs font-mono-receipt text-[#cbd5e1] focus:outline-none focus:border-[#f59e0b]"
             >
               <option value="all">All Emotional Moods</option>
               {MOODS.map((mood) => (
@@ -293,13 +329,14 @@ export default function LedgerView({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono-receipt uppercase tracking-widest text-[#5d6475] mb-1.5">
+            <label htmlFor="time-filter-select" className="block text-[10px] font-mono-receipt uppercase tracking-widest text-[#94a3b8] mb-1.5">
               Circadian Time Window
             </label>
             <select
+              id="time-filter-select"
               value={selectedTimeBucket}
               onChange={(e) => setSelectedTimeBucket(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-[#08090f] border border-white/[0.08] text-xs font-mono-receipt text-[#b0b7c9] focus:outline-none focus:border-[#f59e0b]"
+              className="w-full px-3.5 py-2 rounded-xl bg-[#08090f] border border-white/[0.08] text-xs font-mono-receipt text-[#cbd5e1] focus:outline-none focus:border-[#f59e0b]"
             >
               <option value="all">All Hours of Day</option>
               <option value="night">Night (22:00 – 06:00) · 2 AM Curve</option>
@@ -310,13 +347,14 @@ export default function LedgerView({
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono-receipt uppercase tracking-widest text-[#5d6475] mb-1.5">
+            <label htmlFor="chapter-filter-select" className="block text-[10px] font-mono-receipt uppercase tracking-widest text-[#94a3b8] mb-1.5">
               Life Chapter
             </label>
             <select
+              id="chapter-filter-select"
               value={selectedChapter}
               onChange={(e) => setSelectedChapter(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl bg-[#08090f] border border-white/[0.08] text-xs font-mono-receipt text-[#b0b7c9] focus:outline-none focus:border-[#f59e0b]"
+              className="w-full px-3.5 py-2 rounded-xl bg-[#08090f] border border-white/[0.08] text-xs font-mono-receipt text-[#cbd5e1] focus:outline-none focus:border-[#f59e0b]"
             >
               <option value="all">All 4 Chapters</option>
               {chapters.map((ch, idx) => (
@@ -352,9 +390,9 @@ export default function LedgerView({
 
         {/* Empty State */}
         {filteredReceipts.length === 0 ? (
-          <div className="py-20 text-center space-y-4 font-mono-receipt text-sm text-[#656a78]">
+          <div className="py-20 text-center space-y-4 font-mono-receipt text-sm text-[#525765]">
             <p className="font-bold">NO RECEIPTS MATCH YOUR ACTIVE FILTERS</p>
-            <p className="text-xs text-[#7e8494]">Try resetting your search query or selecting "All 466 Receipts"</p>
+            <p className="text-xs text-[#757a87]">Try resetting your search query or selecting "All 466 Receipts"</p>
             <button
               onClick={clearAllFilters}
               className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-[#171920] text-[#fbf9f3] rounded-xl hover:opacity-90"
@@ -365,11 +403,12 @@ export default function LedgerView({
         ) : (
           /* Continuous Receipt Line Items */
           <div className="divide-y divide-dashed divide-[#cfc7b4] py-4">
-            {filteredReceipts.map((receipt) => {
+            {visibleReceipts.map((receipt) => {
               const meta = TYPE_META[receipt.type] || { label: receipt.type, short: '◈', color: '#171920' }
               const mood = MOOD_META[receipt.mood] || { label: receipt.mood, color: '#666' }
               const connections = threads.adjacency.get(receipt.id) || []
               const isNight = receipt.isNight
+              const bookmarked = isBookmarked && isBookmarked(receipt.id)
 
               return (
                 <div
@@ -378,24 +417,41 @@ export default function LedgerView({
                     sound.playPaperRustle()
                     onSelectReceipt(receipt)
                   }}
+                  onMouseEnter={() => {
+                    sound.playSonificationTone(receipt.mood, receipt.energy)
+                  }}
                   className="py-4 px-3 hover:bg-[#ede7d8] rounded-xl transition-all cursor-pointer group space-y-2 relative"
                 >
                   {/* Top Metadata Strip */}
-                  <div className="flex items-center justify-between text-[11px] font-mono-receipt text-[#545967]">
+                  <div className="flex items-center justify-between text-[11px] font-mono-receipt text-[#525765]">
                     <span className="flex items-center gap-1.5 font-bold text-[#171920]">
                       <span>{meta.short}</span>
                       <span className="uppercase">{meta.label}</span>
-                      <span className="text-[#7c8290] font-normal">№ {receipt.id}</span>
+                      <span className="text-[#64748b] font-normal">№ {receipt.id}</span>
                     </span>
 
-                    <span className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      {onToggleBookmark && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            sound.playTick(1500)
+                            onToggleBookmark(receipt.id)
+                          }}
+                          aria-label={bookmarked ? 'Remove saved receipt' : 'Save receipt to favorites'}
+                          className="text-[#94a3b8] hover:text-[#f59e0b] p-0.5 rounded transition-colors"
+                        >
+                          <Star className={`w-3.5 h-3.5 ${bookmarked ? 'fill-[#f59e0b] text-[#f59e0b]' : ''}`} />
+                        </button>
+                      )}
+
                       {isNight && (
                         <span className="px-1.5 py-0.2 rounded text-[9px] bg-[#171920] text-[#fbf9f3] font-bold">
                           2 AM CURVE
                         </span>
                       )}
                       <span>{fmtDateShort(receipt.dt)} · {receipt.timeStr}</span>
-                    </span>
+                    </div>
                   </div>
 
                   {/* Heading & Price */}
@@ -418,13 +474,13 @@ export default function LedgerView({
                   )}
 
                   {/* Tags & Connected Echoes */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[10px] font-mono-receipt text-[#696f7e]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[10px] font-mono-receipt text-[#525765]">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="px-1.5 py-0.5 rounded border border-[#b8b09d] text-[#292b34] uppercase font-medium">
+                      <span className="px-1.5 py-0.5 rounded border border-[#b8b09d] text-[#171920] uppercase font-medium">
                         {mood.label}
                       </span>
                       {receipt.city && (
-                        <span className="px-1.5 py-0.5 rounded border border-[#b8b09d] text-[#292b34]">
+                        <span className="px-1.5 py-0.5 rounded border border-[#b8b09d] text-[#171920]">
                           📍 {receipt.city}
                         </span>
                       )}
@@ -445,6 +501,30 @@ export default function LedgerView({
                 </div>
               )
             })}
+
+            {/* Progressive Loading Controls */}
+            {visibleCount < filteredReceipts.length && (
+              <div className="pt-6 pb-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={() => {
+                    sound.playTick(1200)
+                    setVisibleCount((prev) => Math.min(prev + 35, filteredReceipts.length))
+                  }}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl font-mono-receipt text-xs font-bold bg-[#171920] text-[#fbf9f3] hover:bg-black transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none"
+                >
+                  Load Next 35 Receipts ({filteredReceipts.length - visibleCount} Remaining)
+                </button>
+                <button
+                  onClick={() => {
+                    sound.playTick(1400)
+                    setVisibleCount(filteredReceipts.length)
+                  }}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl font-mono-receipt text-xs text-[#525765] hover:text-[#171920] border border-[#b8b09d] hover:bg-[#ede7d8] transition-all"
+                >
+                  Show All ({filteredReceipts.length})
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -471,8 +551,8 @@ export default function LedgerView({
 
           {/* Barcode Strip */}
           <div className="py-2 flex flex-col items-center justify-center space-y-1.5">
-            <div className="h-9 w-64 flex items-center justify-between text-[#171920] overflow-hidden">
-              {[...Array(56)].map((_, i) => (
+            <div className="h-9 w-64 flex items-center justify-between text-[#171920] overflow-hidden" aria-hidden="true">
+              {Array.from({ length: 56 }).map((_, i) => (
                 <span
                   key={i}
                   className="barcode-line"
@@ -483,12 +563,12 @@ export default function LedgerView({
                 />
               ))}
             </div>
-            <span className="font-mono-receipt text-[9px] tracking-widest text-[#666b79]">
+            <span className="font-mono-receipt text-[9px] tracking-widest text-[#525765]">
               * 2024-2025-OFFICIAL-LIFE-RECORD *
             </span>
           </div>
 
-          <div className="text-[10px] font-mono-receipt text-[#757a87] italic">
+          <div className="text-[10px] font-mono-receipt text-[#64748b] italic">
             "A life lived in fragments, preserved in paper."
           </div>
         </div>

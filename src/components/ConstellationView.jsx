@@ -2,24 +2,21 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   Network,
   Sparkles,
-  Zap,
   Users,
   Music,
   MapPin,
   Coffee,
-  Moon,
-  ChevronRight,
-  Info,
-  Maximize2,
-  Filter
+  Moon
 } from 'lucide-react'
-import { TYPE_META, MOOD_META } from '../engine/types'
-import { fmtDate, fmtDateShort, fmtTime } from '../utils/formatters'
+import { TYPE_META } from '../engine/types'
+import { fmtDate, fmtTime } from '../utils/formatters'
 import { sound } from '../audio/soundEngine'
 
+/**
+ * ConstellationView: Interactive cosmic graph and multi-receipt moment synthesizer.
+ */
 export default function ConstellationView({
   receipts,
-  chapters,
   threads,
   onSelectReceipt
 }) {
@@ -72,7 +69,7 @@ export default function ConstellationView({
     const width = (canvas.width = canvas.parentElement.clientWidth)
     const height = (canvas.height = 460)
 
-    // Select 50 representative nodes
+    // Select 52 representative nodes
     const sampleNodes = receipts.slice(0, 52).map((r, i) => {
       const angle = (i / 52) * Math.PI * 2
       const radius = 130 + ((i * 47) % 90)
@@ -86,6 +83,33 @@ export default function ConstellationView({
         speed: 0.008 + Math.random() * 0.008,
       }
     })
+
+    // Interactive mousemove handler to find hovered node
+    const handleMouseMove = (e) => {
+      const rect = canvas.getBoundingClientRect()
+      const mx = e.clientX - rect.left
+      const my = e.clientY - rect.top
+
+      let closest = null
+      let minDist = 22
+
+      sampleNodes.forEach((node) => {
+        const d = Math.hypot(node.x - mx, node.y - my)
+        if (d < minDist) {
+          closest = node
+          minDist = d
+        }
+      })
+
+      setHoveredNode(closest)
+    }
+
+    const handleMouseLeave = () => {
+      setHoveredNode(null)
+    }
+
+    canvas.addEventListener('mousemove', handleMouseMove)
+    canvas.addEventListener('mouseleave', handleMouseLeave)
 
     // Background cosmic dust particles
     const stars = Array.from({ length: 60 }).map(() => ({
@@ -116,7 +140,7 @@ export default function ConstellationView({
       ctx.fillRect(0, 0, width, height)
 
       // Update positions
-      sampleNodes.forEach((node, i) => {
+      sampleNodes.forEach((node) => {
         node.x = node.baseX + Math.sin(t * node.speed * 40 + node.phase) * 8
         node.y = node.baseY + Math.cos(t * node.speed * 40 + node.phase) * 8
       })
@@ -168,15 +192,41 @@ export default function ConstellationView({
 
     render()
 
-    return () => cancelAnimationFrame(animId)
+    let isVisible = true
+    const handleVisibility = () => {
+      isVisible = !document.hidden
+      if (isVisible) {
+        animId = requestAnimationFrame(render)
+      } else {
+        cancelAnimationFrame(animId)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      canvas.removeEventListener('mousemove', handleMouseMove)
+      canvas.removeEventListener('mouseleave', handleMouseLeave)
+      document.removeEventListener('visibilitychange', handleVisibility)
+      cancelAnimationFrame(animId)
+    }
   }, [receipts, threads, hoveredNode])
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-12">
+    <div
+      role="tabpanel"
+      id="panel-graph"
+      aria-labelledby="tab-graph"
+      className="max-w-6xl mx-auto px-4 py-8 space-y-12"
+    >
+      {/* Screen-reader descriptive summary */}
+      <div className="sr-only">
+        Interactive celestial memory constellation with 52 interconnected life nodes and {threads.moments?.length || 0} multi-receipt synthesized moments showing connections across music, travel, people, and evening events.
+      </div>
+
       {/* Header */}
       <section className="space-y-4">
         <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono-receipt text-[#f59e0b]">
-          <Network className="w-3.5 h-3.5" />
+          <Network className="w-3.5 h-3.5" aria-hidden="true" />
           <span className="tracking-wider">CELESTIAL GRAPH & ECHO MATRIX</span>
         </div>
 
@@ -184,7 +234,7 @@ export default function ConstellationView({
           How Unrelated Fragments Connect To Form A Life
         </h1>
 
-        <p className="font-sans-ui text-sm sm:text-base text-[#9da5b8] max-w-3xl leading-relaxed">
+        <p className="font-sans-ui text-sm sm:text-base text-[#94a3b8] max-w-3xl leading-relaxed">
           A song played at 2 AM in January echoes with a photo taken in Lisbon in June. A message from Maya correlates with a sudden shift in sleep patterns. Explore both tight time clusters (moments happening minutes apart) and long-range emotional echoes.
         </p>
 
@@ -200,13 +250,13 @@ export default function ConstellationView({
                   sound.playTick(1200)
                   setSelectedClusterTheme(theme.id)
                 }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-mono-receipt border transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-mono-receipt border transition-all focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none ${
                   isSelected
                     ? 'border-[#f59e0b] bg-[#f59e0b]/20 text-[#fbf9f5] font-bold shadow-[0_0_15px_rgba(245,158,11,0.25)]'
-                    : 'border-white/[0.06] bg-[#0f1118] text-[#868d9f] hover:bg-[#151722] hover:text-[#d3d8e5]'
+                    : 'border-white/[0.06] bg-[#0f1118] text-[#cbd5e1] hover:bg-[#151722] hover:text-[#fbf9f5]'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" style={{ color: theme.color }} />
+                <Icon className="w-3.5 h-3.5" style={{ color: theme.color }} aria-hidden="true" />
                 <span>{theme.label}</span>
               </button>
             )
@@ -216,21 +266,36 @@ export default function ConstellationView({
 
       {/* Celestial Graph Canvas */}
       <section className="rounded-3xl border border-white/[0.08] bg-[#07080c] p-6 shadow-2xl relative overflow-hidden">
-        <div className="flex items-center justify-between mb-4 text-xs font-mono-receipt text-[#6f7688]">
+        <div className="flex items-center justify-between mb-4 text-xs font-mono-receipt text-[#94a3b8]">
           <span className="flex items-center gap-2 text-[#fbf9f5]">
-            <Sparkles className="w-4 h-4 text-[#f59e0b]" />
+            <Sparkles className="w-4 h-4 text-[#f59e0b]" aria-hidden="true" />
             <span>INTERACTIVE LIFE CONSTELLATION (52 NODES & FILAMENTS)</span>
           </span>
-          <span className="text-[11px] text-[#5b6375] hidden sm:inline">
-            Hover nodes to spotlight cross-temporal filaments
+          <span className="text-[11px] text-[#94a3b8] hidden sm:inline">
+            Hover mouse over nodes to spotlight connected echoes
           </span>
         </div>
 
         <div className="relative w-full h-[460px] rounded-2xl overflow-hidden bg-[#06070a] border border-white/[0.05]">
-          <canvas ref={canvasRef} className="w-full h-full block" />
+          <canvas ref={canvasRef} className="w-full h-full block cursor-crosshair" aria-label="Interactive Constellation Graph Canvas" />
+
+          {/* Hovered Node Floating Tooltip */}
+          {hoveredNode && (
+            <div
+              onClick={() => onSelectReceipt(hoveredNode)}
+              className="absolute top-4 right-4 max-w-xs p-3.5 rounded-2xl bg-[#0e1017]/95 border border-[#f59e0b]/50 shadow-2xl text-xs font-mono-receipt space-y-1.5 cursor-pointer hover:scale-102 transition-transform"
+            >
+              <div className="flex items-center justify-between text-[#f59e0b]">
+                <span className="font-bold uppercase">{hoveredNode.type} № {hoveredNode.id}</span>
+                <span className="text-[10px] text-[#94a3b8]">{fmtDate(hoveredNode.dt)}</span>
+              </div>
+              <p className="text-[#fbf9f5] font-bold line-clamp-2">{hoveredNode.heading}</p>
+              <p className="text-[10px] text-[#94a3b8]">Click to inspect in slide-over</p>
+            </div>
+          )}
 
           {/* Floating Graph Legend */}
-          <div className="absolute bottom-4 left-4 p-3.5 rounded-2xl bg-[#0a0b12]/90 backdrop-blur-md border border-white/[0.08] text-[11px] font-mono-receipt space-y-1.5 text-[#8890a2] shadow-xl">
+          <div className="absolute bottom-4 left-4 p-3.5 rounded-2xl bg-[#0a0b12]/90 backdrop-blur-md border border-white/[0.08] text-[11px] font-mono-receipt space-y-1.5 text-[#cbd5e1] shadow-xl">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#34d399]" />
               <span>Music & Vinyl Soundtracks</span>
@@ -255,10 +320,10 @@ export default function ConstellationView({
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xs font-mono-receipt uppercase tracking-widest text-[#848c9e]">
+            <h2 className="text-xs font-mono-receipt uppercase tracking-widest text-[#94a3b8]">
               Synthesized Moments (Tight Time Clusters)
             </h2>
-            <p className="text-xs text-[#5d6475] font-sans-ui">
+            <p className="text-xs text-[#94a3b8] font-sans-ui">
               Song → Location → Photo → Purchase → Event occurring in unison
             </p>
           </div>
@@ -285,7 +350,7 @@ export default function ConstellationView({
                   <span className="text-[#f59e0b] font-bold">
                     MOMENT № {String(idx + 1).padStart(2, '0')}
                   </span>
-                  <span className="text-[#6d7486]">
+                  <span className="text-[#94a3b8]">
                     {fmtDate(firstRec.dt)} · {fmtTime(firstRec.dt)}
                   </span>
                 </div>
@@ -326,17 +391,17 @@ export default function ConstellationView({
                           sound.playPaperRustle()
                           onSelectReceipt(r)
                         }}
-                        className="flex items-center justify-between p-3 rounded-xl bg-[#08090f] hover:bg-[#141622] border border-white/[0.05] text-xs cursor-pointer transition-colors"
+                        className="flex items-center justify-between p-3 rounded-xl bg-[#08090f] hover:bg-[#141622] border border-white/[0.05] text-xs cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-[#f59e0b] outline-none"
                       >
                         <div className="flex items-center gap-2 truncate pr-2">
                           <span style={{ color: meta.color }} className="font-mono-receipt font-bold">
                             {meta.short}
                           </span>
-                          <span className="font-mono-receipt text-[#d6dbe7] truncate">
+                          <span className="font-mono-receipt text-[#e2e8f0] truncate">
                             {r.heading}
                           </span>
                         </div>
-                        <span className="font-mono-receipt text-[11px] text-[#697184] shrink-0">
+                        <span className="font-mono-receipt text-[11px] text-[#94a3b8] shrink-0">
                           {r.timeStr}
                         </span>
                       </div>
